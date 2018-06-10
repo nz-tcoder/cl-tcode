@@ -46,10 +46,12 @@
  (special-commands
   .
   (
+   ((2 2) . toggle-alnum-mode) ; 33 : 半角・全角切り替え。
    ((23 26) . mazegaki-begin-conversion) ; fj: 交ぜ書き変換
    ))
  (help-string . "Tコードモード中のキー操作は次のとおり。
-   fj : 交ぜ書き変換を行う(see variable `tcode-use-prefix-mazegaki')。
+   33 : Tコード表にある英数字・記号の文字コードの半角・全角切り替え。
+   fj : 交ぜ書き変換を行う)。
    C-\\: Tコードモードを抜ける。"))
 
   

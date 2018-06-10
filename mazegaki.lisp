@@ -84,9 +84,8 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
     (if (use-whole-table whole-page candidate-table)
         (progn
           (setq msg (format nil "~a ~@[~a~]" msg suffix))
-          (if (not (and (minibuffer-window-p (current-window))
-                        (null msg)))
-              (message (or msg "")))
+          (if (not (minibuffer-window-p (current-window)))
+              (message msg ""))
           (tcode-display-help-buffer
            (tcode-draw-table candidate-table page whole-page)))
         ;; show in minibuffer

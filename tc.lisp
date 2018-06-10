@@ -47,6 +47,9 @@
 (defconstant +ASCII-TILDE+ (char-code #\~))
 (defconstant +ASCII-MAX+ 127)
 
+(defvar *zen-han-map* (make-hash-table)
+    "半角英数字と全角英数字変換用ハッシュ表。")
+
 (defvar *tcode-stroke-buffer-name* " *tcode: stroke*")
 (defvar *tcode-help-buffer-name* "*T-Code Help*")
 
@@ -67,6 +70,24 @@
 
 (define-attribute inflection
   (t :reverse-p t))
+
+(defun hankaku-p (ch)
+  (let ((code (char-code ch)))
+    (and (>= code +ASCII-SPACE+)
+         (>= +ASCII-MAX+ code))))
+
+(defun setup-zen-han-map ()
+  (let ((zenkaku  ; 半角にした場合のアスキーコード順
+          (format nil "~@{~a~}"
+                  "　！”＃＄％＆’（）＊＋，−．／０１２３４５６７８９：；＜＝＞？"
+                  "＠ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ［¥］＾＿"
+                  "‘ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ｛｜｝‾")))
+    (loop for z across zenkaku
+          for code from +ASCII-SPACE+
+          for ch = (code-char code)
+          do
+             (setf (gethash z *zen-han-map*) ch
+                   (gethash ch *zen-han-map*) z))))
 
 (defun tcode-verbose-message (message &optional non-verbose-message)
   "変数 `*tcode-verbose-message*' が non-nil の場合には、 MESSAGE を表示する。
@@ -189,7 +210,10 @@
    (strokes
     :initform nil
     :reader strokes
-    :documentation "それまでに入力したストーク ((char . code) ...)")
+    :documentation "それまでに入力したスロトーク ((char . code) ...)")
+   (use-hankaku
+    :initform t
+    :documentation "英数字を半角で表示する(ディフォルト)")
    (help-string
     :initarg :help-string
     :initform nil
@@ -216,12 +240,12 @@
     (make-array
      95
      :initial-contents
-     '( -1  -1  -1  -1  -1  -1  -1  -1  -1  -1  -1  -1  37  -1  38  39
-       09  00  01  02  03  04  05  06  07  08  -1  29  -1  -1  -1  -1
-       -1  -2  -2  -2  -2  -2  -2  -2  -2  -2  -2  -2  -2  -2  -2  -2
-       -2  -2  -2  -2  -2  -2  -2  -2  -2  -2  -2  -1  -1  -1  -1  -1
-       -1  20  34  32  22  12  23  24  25  17  26  27  28  36  35  18
-       19  10  13  21  14  16  33  11  31  15  30  -1  -1  -1  -1))
+     '(-1 -3 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 37 -1 38 39
+       09 00 01 02 03 04 05 06 07 08 -1 29 -1 -3 -1 -3
+       -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+       -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+       -1 20 34 32 22 12 23 24 25 17 26 27 28 36 35 18
+       19 10 13 21 14 16 33 11 31 15 30 -1 -3 -1 -1))
      :reader key-translation-rule
      :documentation
   "Tコードキー変換用テーブル。その1文字を入力したときの意味を表す。
@@ -247,6 +271,16 @@
           do
              (tcode-set-action-to-table (reverse strokes) value table))))
 
+(defmethod toggle-alnum ((engine tc-engine))
+  (with-slots (use-hankaku) engine
+    (setf use-hankaku (not use-hankaku))))
+
+(defmethod filter ((engine tc-engine) ch)
+  (with-slots (use-hankaku) engine
+    (if (and (not use-hankaku) (hankaku-p ch))
+        (gethash ch *zen-han-map*)
+        ch)))
+
 (defmethod tcode-decode-verbose ((engine tc-engine))
   (concatenate 'string (nreverse (mapcar #'car (strokes engine)))))
 
@@ -260,7 +294,7 @@
 (defmethod clear-strokes ((engine tc-engine))
   (with-slots (strokes) engine
     (setf strokes nil)))
-  
+
 (defmethod tcode-decode ((engine tc-engine))
   (with-slots (strokes table) engine
     (if (< (length strokes) 2)
@@ -280,6 +314,7 @@
                 ((= key -1)
                  ch)
                 ((= key -2)
+                 (message "key is -2, ch is ~c" ch)
                  (char-downcase ch))
                 (t
                  (- key)))
@@ -313,7 +348,8 @@
       (tcode-decode-chars *tc-engine* (insertion-key-p (last-read-key-sequence)))
     (declare (ignorable args))
     (cond ((characterp decoded)   ; decoded 
-           (insert-character (current-point) decoded))
+           (insert-character (current-point)
+                             (filter *tc-engine* decoded)))
           ((lem::get-command decoded)
            (funcall decoded))
           ((eq decoded t)
@@ -330,6 +366,9 @@
 (define-command tc-mode-help () ()
   (tcode-display-help-buffer (help-string *tc-engine*)))
 
+(define-command toggle-alnum-mode () ()
+  (toggle-alnum *tc-engine*))
+
 (defun setup-tcode (file)
   (with-open-file (st file)
     (let ((alist (read st)))
@@ -342,9 +381,13 @@
                            :table-size (al2v 'table-size)
                            :base-table (al2v 'table)
                            :help-string (al2v 'help-string))))))
-  (loop for char in *tcode-char-list*
+  (setup-zen-han-map)
+  (loop for code from +ASCII-SPACE+ to +ASCII-TILDE+
+        for char = (code-char code)
         do
            (define-key *tc-mode-keymap*
-             (format nil "~c" char) 'tcode-self-insert-command))
+             (if (eql char #\space)
+                 "Space"
+                 (format nil "~c" char)) 'tcode-self-insert-command))
   (define-key *tc-mode-keymap* "?" 'tc-mode-help)
   (define-key *global-keymap* "C-\\" 'tc-mode))
