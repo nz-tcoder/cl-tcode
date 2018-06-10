@@ -46,8 +46,7 @@
  (special-commands
   .
   (
-    ;; ((23 26) . mazegaki-begin-conversion) ; fj: 交ぜ書き変換
-   ((26 23) . mazegaki-begin-conversion) ; fj: 交ぜ書き変換
+   ((23 26) . mazegaki-begin-conversion) ; fj: 交ぜ書き変換
    ))
  (help-string . "Tコードモード中のキー操作は次のとおり。
    fj : 交ぜ書き変換を行う(see variable `tcode-use-prefix-mazegaki')。

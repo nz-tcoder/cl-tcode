@@ -245,7 +245,7 @@
           (setup-tcode-table table-size base-table non-2-stroke-char-list))
     (loop for (strokes . value) in special-command-alist
           do
-             (tcode-set-action-to-table strokes value table))))
+             (tcode-set-action-to-table (reverse strokes) value table))))
 
 (defmethod tcode-decode-verbose ((engine tc-engine))
   (concatenate 'string (nreverse (mapcar #'car (strokes engine)))))
