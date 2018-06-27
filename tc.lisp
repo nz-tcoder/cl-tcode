@@ -371,7 +371,8 @@
 
 (defun setup-tcode (file)
   (with-open-file (st file)
-    (let ((alist (read st)))
+    (let* ((*package* (find-package :lem.tc-mode))
+           (alist (read st)))
       (labels ((al2v (k)
                  (cdr (assoc k alist))))
         (setq *tc-engine*
