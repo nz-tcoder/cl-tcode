@@ -41,11 +41,14 @@
    "留列刻豆看■■■■■竹注介具失司迎華許補左態花栄ザ調混ポ決ミ州払乗庫状団計夫食総"
    "替沼? 辞献■■■■■ゅ修究答養復並浦ユ冷ぬ展警型誰組選党択体例満津準遊戸ひょ価与"
    "還更占箱矢■■■■■志抜航層深担陸巻競護根様独止堂銀以ヌ営治字材過諸単身ピ勝反ズ"))
- (non-2-stroke . (mapcar #'(lambda (str) (elt str 0))
-                         '("■" "◆" "◇")))
+ (non-2-stroke . (#\■  #\◆   #\◇))
  (special-commands
   .
   (
+   ((0 0) . (tc-show-tables "LL")) ; 11 :  LL表の表示
+   ((0 9) . (tc-show-tables "LR")) ; 10 :  LR表の表示
+   ((9 0) . (tc-show-tables "RL")) ; 01 :  RL表の表示
+   ((9 9) . (tc-show-tables "RR")) ; 00 :  RR表の表示
    ((2 2) . toggle-alnum-mode) ; 33 : 半角・全角切り替え。
    ((23 26) . mazegaki-begin-conversion) ; fj: 交ぜ書き変換
    ))

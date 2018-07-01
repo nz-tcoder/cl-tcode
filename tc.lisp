@@ -89,6 +89,11 @@
              (setf (gethash z *zen-han-map*) ch
                    (gethash ch *zen-han-map*) z))))
 
+(defun to-zenkaku (ch)
+  (alexandria:if-let ((zenkaku (gethash ch *zen-han-map*)))
+    zenkaku
+    ch))
+
 (defun tcode-verbose-message (message &optional non-verbose-message)
   "変数 `*tcode-verbose-message*' が non-nil の場合には、 MESSAGE を表示する。
 そうでないとき、 NON-VERBOSE-MESSAGE があれば、これを表示する。"
@@ -162,7 +167,8 @@
   "コード入力用の内部テーブルに入力列 STROKES に対する VALUE を設定する。
 動作(VALUE)として指定できるのは以下のとおり。
 
-  ただし、cl-tcodeでは、symbolのみ対応。
+  ただし、cl-tcodeでは、以下の中でコマンドとリスト(ただし関数名と引数と解釈)
+  のみ対応。
 
     - コマンド (symbol)そのコマンドを実行する。
     - 関数 (symbol, lambda式)その関数を引数なしで呼ぶ。
@@ -347,10 +353,14 @@
   (destructuring-bind (decoded &rest args)
       (tcode-decode-chars *tc-engine* (insertion-key-p (last-read-key-sequence)))
     (declare (ignorable args))
-    (cond ((characterp decoded)   ; decoded 
+    (cond ((consp decoded)
+           (apply (car decoded) (cdr decoded)))
+          ((characterp decoded)
            (insert-character (current-point)
                              (filter *tc-engine* decoded)))
-          ((lem::get-command decoded)
+          ((functionp decoded)
+           (funcall decoded))
+          ((and (symbolp decoded) (lem::get-command decoded))
            (funcall decoded))
           ((eq decoded t)
            (clear-strokes *tc-engine*)))))
@@ -368,6 +378,18 @@
 
 (define-command toggle-alnum-mode () ()
   (toggle-alnum *tc-engine*))
+
+(define-command tc-show-tables (seq) ("sRL,RR,LR,LL: ")
+  (let ((func-pair (cond ((string-equal seq "RL") '(right-p left-p))
+                         ((string-equal seq "RR") '(right-p right-p))
+                         ((string-equal seq "LR") '(left-p right-p))
+                         ((string-equal seq "LL") '(left-p left-p )))))
+    (if func-pair
+        (tcode-display-help-buffer
+         (format nil "~a~%~%~a" (string-upcase seq)
+                 (show-help-table (make-stroke-help-rows *tc-engine*
+                                                         (first func-pair)
+                                                         (second func-pair))))))))
 
 (defun setup-tcode (file)
   (with-open-file (st file)
