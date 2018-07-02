@@ -391,7 +391,7 @@
                                                          (first func-pair)
                                                          (second func-pair))))))))
 
-(defun setup-tcode (file)
+(defun setup-tcode (file toggle-key)
   (with-open-file (st file)
     (let ((alist (read st)))
       (labels ((al2v (k)
@@ -412,4 +412,4 @@
                  "Space"
                  (format nil "~c" char)) 'tcode-self-insert-command))
   (define-key *tc-mode-keymap* "?" 'tc-mode-help)
-  (define-key *global-keymap* "C-\\" 'tc-mode))
+  (define-key *global-keymap* toggle-key 'tc-mode))

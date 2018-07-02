@@ -18,7 +18,7 @@ Tコードについては、http://openlab.jp/tcode/ を参照ください。
 * cl-tcodeをasdfのライブラリとしてロードできるようにする。
 * 混ぜ書き用辞書(mazegaki.dic)を`*tcode-dir*`(任意で可。ex. ~/cl-tcode)に置く。
 * tcテーブル(tc-tbl.lisp)を`*tcode-dir*`に置く。
-* `C-\`でtcode-modeをトグルします。
+* setup-tcodeの引数に指定したキーでtcode-modeをトグルします。
 
 ### 混ぜ書き用辞書
 * tc2のmazegaki.dicであればOK。ただし、文字コードをutf-8にしてください。
@@ -43,6 +43,8 @@ Tコードについては、http://openlab.jp/tcode/ を参照ください。
 (setup-mazegaki-dic (merge-pathnames (format nil "~a/~a" 
                                              *tcode-dir*
                                              *tcode-dic-file-name*)
-                                     (user-homedir-pathname)))
+                                     (user-homedir-pathname))
+             "C-\\")
+
 ```
 
