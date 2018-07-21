@@ -368,7 +368,7 @@
 (defun cancel-strokes ()
   (when (tc-mode-p)
     (unless (lem::keymap-find-keybind *tc-mode-keymap*
-                                      (last-read-key-sequence))
+                                      (last-read-key-sequence) nil)
       (clear-strokes *tc-engine*))))
 
 (add-hook *post-command-hook* 'cancel-strokes)
@@ -391,9 +391,10 @@
                                                          (first func-pair)
                                                          (second func-pair))))))))
 
-(defun setup-tcode (file toggle-key)
+(defun setup-tcode (file)
   (with-open-file (st file)
-    (let ((alist (read st)))
+    (let* ((*package* (find-package :lem.tc-mode))
+           (alist (read st)))
       (labels ((al2v (k)
                  (cdr (assoc k alist))))
         (setq *tc-engine*
@@ -412,4 +413,6 @@
                  "Space"
                  (format nil "~c" char)) 'tcode-self-insert-command))
   (define-key *tc-mode-keymap* "?" 'tc-mode-help)
-  (define-key *global-keymap* toggle-key 'tc-mode))
+
+  (define-key *global-keymap* "M-\\" 'tc-mode))
+
