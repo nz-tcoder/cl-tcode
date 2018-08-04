@@ -1,4 +1,4 @@
-(in-package :lem.tc-mode)
+(in-package :cl-tcode)
 
 (defun left-p (key)
   (< (rem key 10) 5))

@@ -13,5 +13,5 @@
            (uiop:symbol-call :dex :fetch *mazegakiuri* *mazegakipath* :if-exists :overwrite)
            (probe-file *mazegakipath*))))
 
-(lem.tc-mode::setup-tcode (merge-pathnames "tc-tbl.lisp" *base*))
-(lem.tc-mode::setup-mazegaki-dic (mazegaki))
+(cl-tcode:setup-tcode (merge-pathnames "tc-tbl.lisp" *base*))
+(cl-tcode:setup-mazegaki-dic (mazegaki))

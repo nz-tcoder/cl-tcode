@@ -1,4 +1,4 @@
-(in-package :lem.tc-mode)
+(in-package :cl-tcode)
 
 (defun char-to-string (ch)
   (format nil "~c" ch))
@@ -26,5 +26,3 @@ padding spaces if needed."
                 (format stream "~a~v<~c~>" x (- mincol len) #\space)
                 ;; right alliened
                 (format stream "~v<~c~>~a" (- mincol len) #\space x))))))
-
-

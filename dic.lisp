@@ -1,4 +1,4 @@
-(in-package :lem.tc-mode)
+(in-package :cl-tcode)
 
 (defvar *tcode-mazegaki-dic* (make-hash-table :test #'equal))
 
@@ -31,6 +31,7 @@
                            lst)
                      (setf (word-list-noun (gethash key *tcode-mazegaki-dic*))
                            lst)))))))
+
 
 (defun lookup-mazegaki-dic (yomi &optional with-inflection)
   (let ((wl (gethash yomi *tcode-mazegaki-dic*)))

@@ -2,7 +2,7 @@
 ;;; ・current pointから行頭まで取る。
 ;;; ・読みがあるかを調べる。
 
-(in-package :lem.tc-mode)
+(in-package :cl-tcode)
 
 (defvar *mazegaki-max-suffix-length* 4
   "読みの中の活用語尾の最大文字数。")

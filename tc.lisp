@@ -1,8 +1,5 @@
-(defpackage :lem.tc-mode
-  (:use :cl :lem)
-  (:export :tc-mode :wj))
 
-(in-package :lem.tc-mode)
+(in-package :cl-tcode)
 
 (defvar *tc-engine* nil)
 
@@ -121,7 +118,7 @@
 (defun make-table-format (width-list)
     (loop for width in width-list
           for i from 0
-          collect (format nil "~~a~~~d~c/lem.tc-mode:wj/" width
+          collect (format nil "~~a~~~d~c/cl-tcode:wj/" width
                           (if (>= i 5) #\: #\@))))
 
 (defun make-column-width (table none-str)
@@ -393,7 +390,7 @@
 
 (defun setup-tcode (file)
   (with-open-file (st file)
-    (let* ((*package* (find-package :lem.tc-mode))
+    (let* ((*package* (find-package :cl-tcode))
            (alist (read st)))
       (labels ((al2v (k)
                  (cdr (assoc k alist))))
