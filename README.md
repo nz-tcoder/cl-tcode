@@ -15,7 +15,16 @@ Tコードについては、http://openlab.jp/tcode/ を参照ください。
 * 練習プログラム。
 
 ## 設定
+使ってみる。
+
 * ros install nz-tcoder/cl-tcode
-* M-x site-init-add-dependency [RET] tcode [RET]
-* ros install lemでlemのdumpを作り直す。
+* M-x lisp-switch-to-repl-buffer
+* CL-USER> (ql:quickload "lem-tcode")
 * M-\でtcode-modeをトグルします。
+
+普段から使う場合はさらに、以下でlemのdumpを作り直す。
+
+* M-x site-init-add-dependency [RET] tcode [RET]
+* ros install lem
+
+

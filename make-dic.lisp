@@ -64,32 +64,34 @@
      finally
        (return tankan-yomi-map)))
 
+(defvar *dakuon*
+  (loop for c across "かきくけこさしすせそたちつてとはひふへほばびぶべぼ"
+        for d across "がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ"
+        with hash = (make-hash-table :test #'equal)
+        do
+           (setf (gethash (format nil "~c" c) hash)
+                 (format nil "~c" d))
+        finally
+           (return hash)))
+
 (defun sokuon-onbin (yomi)
-  (let ((dakuten (make-hash-table :test #'equal)))
-    (map nil #'(lambda (x y)
-                 (setf (gethash (format nil "~c" x) dakuten) 
-                       (format nil "~c" y)))
-         "かきくけこさしすせそたちつてとはひふへほばびぶべぼ"
-         "がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ")
-    (labels ((dakuon (s)         ;濁音を返す。ば行はぱ行を返す。
-               (gethash s dakuten))
-             (call-dakuon (s reg)
-               (ppcre:regex-replace reg s
-                                    #'(lambda (match reg1 reg2)
-                                        (declare (ignore match))
-                                        (format nil "~a~a" (dakuon reg1)
-                                                reg2))
-                                    :simple-calls t))
-             (sokuon (s)
-               (ppcre:regex-replace "[つく]$" s "っ")))
-      (let* ((daku-yomi (call-dakuon yomi "^([かきくけこさしすせそたちつてとはひふへほ])(.+)$"))
-             (handaku-yomi (call-dakuon daku-yomi "^([ばびぶべぼ])(.+)$"))
-             (di (ppcre:regex-replace "^ぢ" daku-yomi "じ")))
-        (remove-duplicates 
-         (remove yomi (list (sokuon yomi) daku-yomi (sokuon daku-yomi)
-                            handaku-yomi (sokuon handaku-yomi) di (sokuon di))
-                 :test #'equal)
-         :test #'equal)))))
+  (labels ((dakuon (s reg) ;濁音を返す。ば行はぱ行を返す。
+             (ppcre:regex-replace
+              reg s #'(lambda (match reg1 reg2)
+                        (declare (ignore match))
+                        (format nil "~a~a" (gethash reg1 *dakuon*) reg2))
+              :simple-calls t))
+           (sokuon (s)
+             (ppcre:regex-replace "[つく]$" s "っ")))
+    (let* ((daku-yomi (dakuon yomi "^([かきくけこさしすせそたちつてとはひふへほ])(.*)$"))
+           (handaku-yomi (dakuon daku-yomi "^([ばびぶべぼ])(.*)$"))
+           (di (ppcre:regex-replace "^ぢ" daku-yomi "じ")))
+      (remove-duplicates (remove yomi (list (sokuon yomi) daku-yomi
+                                            (sokuon daku-yomi)
+                                            handaku-yomi (sokuon handaku-yomi)
+                                            di (sokuon di))
+                                 :test #'equal)
+                         :test #'equal))))
 
 (defun add-onbin (yomi-list)
   (loop for yomi in yomi-list
