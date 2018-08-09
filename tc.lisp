@@ -1,4 +1,3 @@
-
 (in-package :cl-tcode)
 
 (defvar *tc-engine* nil)
@@ -13,6 +12,9 @@
                       STATUS             VALUE
                       complete           decoded value
                       incomplete         nil"))
+
+(defgeneric tcode-endoce (engine ch &optional convert)
+  (:documentation "文字CHARを打ち方(キーのリスト)に変換する。直接入力できなければnilを返す。"))
 
 (defun setup-tcode-table (size base-table non-2-stroke)
   (loop repeat size
@@ -258,6 +260,14 @@
 -3:	`tcode-mode-map' にしたがったコマンド。
 < -3:	- (文字コード)。")))
 
+(defun tcode-key-to-char (engine key)
+  "キーの番号から対応する文字を得る。"
+  (loop for k across (key-translation-rule engine)
+        for i from 0
+        do
+           (if (= k key)
+               (return (code-char (+ i +ASCII-SPACE+))))))
+
 (defun tcode-char-to-key (engine c)
   "Return virtual key code of character C."
   (let ((code (char-code c)))
@@ -306,6 +316,21 @@
               (aref table (cdr (first strokes)) (cdr (second strokes)))
               (mapcar #'car strokes)))))
 
+(defun find-index (table ch)
+  (loop for i from 0 to (1- (array-total-size table))
+        for c = (row-major-aref table i)
+        do
+           (if (eql c ch) (return i))))
+
+(defmethod tcode-encode ((engine tc-engine) ch &optional convert)
+  (with-slots (table table-size) engine
+    (let ((idx (find-index table ch)))
+      (if idx
+          (nreverse (mapcar (if convert
+                                #'(lambda (x) (tcode-key-to-char engine x))
+                                #'identity)
+                            (multiple-value-list (floor idx table-size))))))))
+
 (defun tcode-not-key-action (engine ch key)
   (let ((trace (mapcar #'car (strokes engine))))
     (cons (cond ((and trace
@@ -342,7 +367,7 @@
                (tcode-decode engine)
              (cond ((eq status 'complete)
                     (clear-strokes engine)
-                    (cons val (nreverse (cons ch trace))))
+                    (cons val (nreverse trace)))
                    (t
                     (cons nil nil))))))))
 
@@ -354,7 +379,10 @@
            (apply (car decoded) (cdr decoded)))
           ((characterp decoded)
            (insert-character (current-point)
-                             (filter *tc-engine* decoded)))
+                             (filter *tc-engine* decoded))
+           #+tcode-trace
+           (message "tcode trace: ~a~%" args)
+           )
           ((functionp decoded)
            (funcall decoded))
           ((and (symbolp decoded) (lem::get-command decoded))
@@ -412,4 +440,3 @@
   (define-key *tc-mode-keymap* "?" 'tc-mode-help)
 
   (define-key *global-keymap* "M-\\" 'tc-mode))
-

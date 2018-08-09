@@ -138,6 +138,10 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
    (current
     :accessor mzgk-current
     :documentation "表示している候補: リストあるいは配列")
+   (kakutei
+    :initform nil
+    :reader mzgk-kakutei
+    :documentation "変換を確定した漢字")
    (help-offset
     :initform 0
     :accessor mzgk-offset
@@ -151,6 +155,13 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
           (if (> noc 1)
               (mazegaki-make-candidate-table candidate-list)
               candidate-list))))
+
+(defmethod set-kakutei ((converter mazegaki-converter) &optional inserted)
+  (with-slots (kakutei noc candidate) converter
+    (cond (inserted
+            (setf kakutei inserted))
+          ((= noc 1)
+           (setf kakutei (car candidate))))))
 
 (defmethod set-point ((converter mazegaki-converter))
   (with-slots (point) converter
@@ -330,20 +341,23 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
                          candidate (mazegaki-construct-suffix yomi-list
                                                               suffix))
                  candidate)))
-    (insert-string (current-point) str)))
+    (insert-string (current-point) str)
+    str))
 
 (defun mazegaki-show-candidate-inline (converter candidate)
   (mazegaki-erase-previous-candidate converter)
   (let ((position (point-charpos (current-point))))
     (if (listp candidate)
         (if (= (length candidate) 1)
-            (insert-the-candidate (car candidate)
-                                  (mzgk-suffix converter)
-                                  (mzgk-yomi converter))
+            (set-kakutei converter
+                         (insert-the-candidate (car candidate)
+                                               (mzgk-suffix converter)
+                                               (mzgk-yomi converter)))
             (message "displaying more than 2 words is not yet supported."))
-        (insert-the-candidate candidate
-                              (mzgk-suffix converter)
-                              (mzgk-yomi converter)))
+        (set-kakutei converter
+                     (insert-the-candidate candidate
+                                           (mzgk-suffix converter)
+                                           (mzgk-yomi converter))))
     (with-point ((begin (current-point)))
       (setf (point-charpos begin) position)
       (setf (mzgk-point converter) begin))))
@@ -401,9 +415,13 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
 
   (defun mazegaki-finish ()
     (clear-overlay)
+    (if mazegaki-converter
+        (show-converted-stroke (mzgk-kakutei mazegaki-converter)
+                               (mazegaki-construct-yomi
+                                (mzgk-yomi mazegaki-converter)
+                                (mzgk-len mazegaki-converter))))
     (set-mazegaki-converter nil)
-    (tc-mazegaki-mode nil)
-    (tcode-remove-help-buffer))
+    (tc-mazegaki-mode nil))
 
   (defun mazegaki-show/redo (selected)
     (cond ((stringp selected)
@@ -441,6 +459,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
     (case (mzgk-noc mazegaki-converter)
       (1
        (unread-key-sequence (last-read-key-sequence))
+       (set-kakutei mazegaki-converter)
        (mazegaki-finish))
       (otherwise
        (mazegaki-execute-select))))
