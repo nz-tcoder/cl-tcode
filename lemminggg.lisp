@@ -276,15 +276,35 @@
 (defun get-current-lesson ()
   (aref *lemminggg-lessons* (current-lesson-number)))
 
-(defun lemminggg-make-help (type chars)
-  (ppcre:regex-replace-all (format nil "[^~a \\n]" chars)
-                           (cl-tcode:make-stroke-help type)
-                           "- "))
+(defun drop-head (str)
+  (ppcre:regex-replace "(?s)(?:^.*?\\n)(.*)" str "\\1"))
+
+(defun drop-top-large-row (str)
+  (format nil "~{~a~%~}" (subseq (ppcre:split "\\n" str) 5)))
+
+(defun drop-each-small-top (str)
+  (ppcre:regex-replace-all "(?s)(\\n\\n).*?\\n"
+                           (ppcre:regex-replace "(?s)^.*?\\n" str "")
+                           "\\1"))
+
+(defun drop-top-rows (str)
+  (drop-each-small-top (drop-top-large-row str)))
+
+(defun lemminggg-make-help (type chars &optional whole)
+  (let ((text (ppcre:regex-replace-all (format nil "[^~a \\n]" chars)
+                                       (cl-tcode:make-stroke-help type)
+                                       "- ")))
+    (if whole
+        text
+        (drop-top-rows text))))
+
+(defun help-window-size (type)
+  (if (find #\! type) 20 12))
 
 (defun lemminggg-show-help (lesson)
   (let ((type (eelll-lesson-type lesson))
         (chars (eelll-lesson-chars lesson)))
-    (split-window-vertically (current-window))
+    (split-window-vertically (current-window) (help-window-size type))
     (other-window)
     (cl-tcode:tcode-display-help-buffer (lemminggg-make-help type chars)
                                         *help-buffer-name*)
