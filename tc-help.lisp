@@ -47,7 +47,7 @@
         do
            (format stream "~{~a~^  ~}~%" line)))
 
-(defun show-help-table (matrix)
+(defun make-stroke-help-table (matrix)
   (loop with st = (make-string-output-stream)
         for rows in matrix
         do
@@ -55,6 +55,19 @@
              (format st "~%")
         finally
            (return (get-output-stream-string st))))
+
+(defun make-stroke-help-1 (engine type)
+  (let ((func-pair (cond ((string-equal type "RL") '(right-p left-p))
+                         ((string-equal type "RR") '(right-p right-p))
+                         ((string-equal type "LR") '(left-p right-p))
+                         ((string-equal type "LL") '(left-p left-p )))))
+    (if func-pair
+        (make-stroke-help-table (make-stroke-help-rows engine
+                                                       (first func-pair)
+                                                       (second func-pair))))))
+
+(defun make-stroke-help (type)
+  (make-stroke-help-1 *tc-engine* type))
 
 (defvar *help-stroke-symbol-list* '(#\●  #\○  #\△ #\◇))
 (defvar *help-double-stroke-symbol* #\◎)
@@ -193,4 +206,3 @@
                                           (character-at (current-point)))))
     (tcode-display-help-buffer drawing)
     (message "ストロークはありません。")))
-

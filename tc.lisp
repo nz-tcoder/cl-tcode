@@ -99,9 +99,10 @@
   (and (or *tcode-verbose-message* non-verbose-message)
        (message (if *tcode-verbose-message* message non-verbose-message))))
 
-(defun tcode-display-help-buffer (content)
-  "\"*T-Code Help*\" というバッファに content の内容を表示する。"
-  (with-pop-up-typeout-window (s (make-buffer *tcode-help-buffer-name*
+(defun tcode-display-help-buffer (content &optional buffer-name)
+  "ヘルプバッファ(ディフォルト*tcode-help-buffer-name*)に content の内容を表示する。"
+  (with-pop-up-typeout-window (s (make-buffer (or buffer-name
+                                                  *tcode-help-buffer-name*)
                                               :read-only-p t)
                                  :erase t)
     (format s "~a" content)))
@@ -405,16 +406,10 @@
   (toggle-alnum *tc-engine*))
 
 (define-command tc-show-tables (seq) ("sRL,RR,LR,LL: ")
-  (let ((func-pair (cond ((string-equal seq "RL") '(right-p left-p))
-                         ((string-equal seq "RR") '(right-p right-p))
-                         ((string-equal seq "LR") '(left-p right-p))
-                         ((string-equal seq "LL") '(left-p left-p )))))
-    (if func-pair
-        (tcode-display-help-buffer
-         (format nil "~a~%~%~a" (string-upcase seq)
-                 (show-help-table (make-stroke-help-rows *tc-engine*
-                                                         (first func-pair)
-                                                         (second func-pair))))))))
+  (alexandria:if-let ((help-table (make-stroke-help-1 *tc-engine* seq)))
+                     (tcode-display-help-buffer (format nil "~a~%~%~a"
+                                                        (string-upcase seq)
+                                                        help-table))))
 
 (defun setup-tcode (file)
   (with-open-file (st file)
