@@ -43,6 +43,7 @@ tcode練習用プログラム,lemminggg(ねずみみみ)で使うテキスト。
 
 ### 参考サイト
 * http://openlab.jp/tcode/howto.html#practice
+* https://miau.github.io/eljs/memo.html#top
 
 Do not edit below.
 ## Data part

@@ -357,6 +357,7 @@
     (display-score elapsed-time)
     (insert-current-point "~%~%lesson ~dが終わりました。"
                           (current-lesson-number))
+    (window-see (current-window))
     (lem-select-popup:start-select-popup
      `(("もう一度トライする" . ,#'(lambda (arg)
                                     (declare (ignore arg))
