@@ -101,11 +101,11 @@
 
 (defun tcode-display-help-buffer (content &optional buffer-name)
   "ヘルプバッファ(ディフォルト*tcode-help-buffer-name*)に content の内容を表示する。"
-  (with-pop-up-typeout-window (s (make-buffer (or buffer-name
-                                                  *tcode-help-buffer-name*)
-                                              :read-only-p t)
-                                 :erase t)
-    (format s "~a" content)))
+  (let* ((name (or buffer-name *tcode-help-buffer-name*))
+         (buffer (or (get-buffer name) (make-buffer name))))
+    (erase-buffer buffer)
+    (insert-string (buffer-start-point buffer) content)
+    (pop-to-buffer buffer)))
 
 (defun tcode-remove-help-buffer ()
   (alexandria:if-let (win (car (get-buffer-windows
