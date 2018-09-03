@@ -49,10 +49,12 @@
    ((0 9) . (tc-show-tables "LR")) ; 10 :  LR表の表示
    ((9 0) . (tc-show-tables "RL")) ; 01 :  RL表の表示
    ((9 9) . (tc-show-tables "RR")) ; 00 :  RR表の表示
+   ((1 1) . tcode-jis-code-select) ; 22 : JISコード入力
    ((2 2) . toggle-alnum-mode) ; 33 : 半角・全角切り替え。
    ((23 26) . mazegaki-begin-conversion) ; fj: 交ぜ書き変換
    ))
  (help-string . "Tコードモード中のキー操作は次のとおり。
+   22 : JISコード入力
    33 : Tコード表にある英数字・記号の文字コードの半角・全角切り替え。
    fj : 交ぜ書き変換を行う)。
-   C-\\: Tコードモードを抜ける。"))
+   M-\\: Tコードモードを抜ける。"))
