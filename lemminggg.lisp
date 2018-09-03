@@ -165,9 +165,8 @@
 
 (defun setup-lesson (&optional (number 1))
   (if (lesson-exist-p number)
-      (let ((buffer (or (get-buffer *buffer-name*)
-                        (make-buffer *buffer-name*
-                                     :enable-undo-p nil))))
+      (let ((buffer (make-buffer *buffer-name*
+                                     :enable-undo-p nil)))
         (setf (buffer-read-only-p buffer) nil)
         (switch-to-buffer buffer)
         (erase-buffer buffer)
