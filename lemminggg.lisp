@@ -142,21 +142,8 @@
   (unless *lemminggg-lessons*
     (setq *lemminggg-lessons* (make-array +lesson-size+
                                           :initial-element nil))
-    (read-text-file *text-path*))
-  (loop for code from cl-tcode::+ASCII-SPACE+ to cl-tcode::+ASCII-TILDE+
-        for char = (code-char code)
-        do
-           (define-key *lemminggg-mode-keymap*
-             (if (eql char #\space)
-                 "Space"
-                 (cl-tcode:char-to-string char)) 'lemminggg-key))
-  (define-key *lemminggg-mode-keymap* "Return" 'lemminggg-return)
-  (define-key *lemminggg-mode-keymap* "C-j" 'lemminggg-return)
-  (define-key *lemminggg-mode-keymap* "C-m" 'lemminggg-return)
-  (define-key *lemminggg-mode-keymap* "Backspace" 'lemminggg-delete)
-  (define-key *lemminggg-mode-keymap* "Delete" 'lemminggg-delete)
-  (define-key *lemminggg-mode-keymap* "C-h" 'lemminggg-delete)
-  (define-key *lemminggg-mode-keymap* "C-g" 'lemminggg-confirm-quit))
+    (read-text-file *text-path*)))
+
 
 (defun lesson-exist-p (n)
   (and (> n 0)
@@ -408,9 +395,43 @@
 (define-command lemminggg-key () ()
   (push (insertion-key-p (last-read-key-sequence)) *lesson-input*))
 
-(define-command lemminggg (n) ("n練習テキスト:")
-  (setq *last-active-buffer* (current-buffer))
-  (setf (mode-keymap 'lemminggg-mode) *lemminggg-mode-keymap*)
+(defun completion-lesson-list (str)
+  (loop for lesson across *lemminggg-lessons*
+        if (and lesson
+                (ppcre:scan (format nil "^~d" str)
+                            (format nil "~d" (eelll-lesson-number lesson))))
+        collect (format nil "~d: ~a"
+                        (eelll-lesson-number lesson)
+                        (car (eelll-lesson-text lesson)))))
+
+(defun prompt-for-lesson ()
   (or *lemminggg-modeline*
       (lemminggg-init))
+  (parse-integer (prompt-for-line "練習テキスト: "
+                                  nil
+                                  #'completion-lesson-list
+                                  #'(lambda (str)
+                                      (parse-integer str :junk-allowed t))
+                                  'mh-read-number)
+                 :junk-allowed t))
+
+(define-command lemminggg (n) ((list (prompt-for-lesson)))
+  (setq *last-active-buffer* (current-buffer))
+  (setf (mode-keymap 'lemminggg-mode) *lemminggg-mode-keymap*)
   (setup-lesson n))
+
+;;; set key
+(loop for code from cl-tcode::+ASCII-SPACE+ to cl-tcode::+ASCII-TILDE+
+      for char = (code-char code)
+      do
+         (define-key *lemminggg-mode-keymap*
+           (if (eql char #\space)
+               "Space"
+               (cl-tcode:char-to-string char)) 'lemminggg-key))
+(define-key *lemminggg-mode-keymap* "Return" 'lemminggg-return)
+(define-key *lemminggg-mode-keymap* "C-j" 'lemminggg-return)
+(define-key *lemminggg-mode-keymap* "C-m" 'lemminggg-return)
+(define-key *lemminggg-mode-keymap* "Backspace" 'lemminggg-delete)
+(define-key *lemminggg-mode-keymap* "Delete" 'lemminggg-delete)
+(define-key *lemminggg-mode-keymap* "C-h" 'lemminggg-delete)
+(define-key *lemminggg-mode-keymap* "C-g" 'lemminggg-confirm-quit)
