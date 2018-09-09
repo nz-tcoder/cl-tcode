@@ -181,28 +181,3 @@
       (stroke-drawing (tcode-encode engine ch))
     (and drawing-list
          (stroke-list->string ch drawing-list symbol-order))))
-
-(defun display-direct-stroke (engine kakutei &optional yomi)
-  "KAKUTEI の中で、 YOMI に含まれず、かつ直接入力できる漢字を表示する。"
-  (let* ((target (if yomi
-                    (loop for c across yomi
-                          for result = (remove c kakutei)
-                          then (remove c result)
-                          finally
-                             (return result))
-                    kakutei))
-         (drawing (loop for ch across (remove-duplicates target)
-                        if (show-stroke engine ch) collect it)))
-    (if drawing
-        (tcode-display-help-buffer (format nil "~{~a~%~}" drawing)))))
-
-;;; call in mazegaki.lisp
-(defun show-converted-stroke (kakutei &optional yomi)
-  (and kakutei
-       (display-direct-stroke *tc-engine* kakutei yomi)))
-
-(define-command tcode-query-stroke () ()
-  (alexandria:if-let ((drawing (show-stroke *tc-engine*
-                                          (character-at (current-point)))))
-    (tcode-display-help-buffer drawing)
-    (message "ストロークはありません。")))

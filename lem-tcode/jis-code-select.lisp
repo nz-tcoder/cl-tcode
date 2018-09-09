@@ -1,4 +1,8 @@
-(in-package :cl-tcode)
+(uiop/package:define-package :lem-tcode/jis-code-select
+  (:use :cl :lem)
+  (:export :tcode-jis-code-select))
+
+(in-package :lem-tcode/jis-code-select)
 
 (defvar *jis-code-select-buffer-name* "*JIS code*")
 (defvar *target-buffer* nil)
@@ -9,7 +13,7 @@
     (gethash (+ (* #x8f #x10000) code) lem-encodings/euc-jp::*from*)))
 
 (defun make-jis-code-rows ()
-  (summarize-by-n
+  (cl-tcode:summarize-by-n
    #x20
    (loop for ku from #x21 to #x7e
          append (loop for ten from #x21 to #x7e

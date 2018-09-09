@@ -9,7 +9,13 @@
 (defun ascii-word-char-p (ch)
   (and (characterp ch)
        (< (char-code ch) 128)
-       (syntax-word-char-p ch)))
+       (alphanumericp ch)))
+
+(defun tcode-string-width (str)
+  (reduce #'(lambda (x y)
+              (+ x (if (ascii-word-char-p y) 1 2)))
+          str
+          :initial-value 0))
 
 (defun wj (stream x colon-p at-sign-p &rest params)
   "direcitive function for wide character justification.
@@ -18,7 +24,7 @@ padding spaces if needed."
   (if (null params)
       (format stream "~a" x)
       (let ((mincol (car params))
-            (len (string-width x)))
+            (len (tcode-string-width x)))
         (if (>= len mincol)
             (format stream "~a" x)
             (if at-sign-p

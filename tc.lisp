@@ -34,8 +34,6 @@
         finally
            (return new-table)))
 
-(defvar *tcode-clear-hook* nil)
-
 (defvar *tcode-cancel-stroke-list* '(#\backspace #\rubout)
   "文字入力を明示的に取り消すキーのリスト")
 
@@ -49,9 +47,6 @@
 (defvar *zen-han-map* (make-hash-table)
     "半角英数字と全角英数字変換用ハッシュ表。")
 
-(defvar *tcode-stroke-buffer-name* " *tcode: stroke*")
-(defvar *tcode-help-buffer-name* "*T-Code Help*")
-
 (defvar *tcode-char-list*
   (append (loop for code from (char-code #\a) to (char-code #\z)
                 collect (code-char code))
@@ -62,13 +57,6 @@
 (defvar *tcode-verbose-message* t
   "* non-nil のとき、より多くのメッセージを表示する。"
 )
-
-;; for overlay
-(define-attribute conversion
-  (t :underline-p t))
-
-(define-attribute inflection
-  (t :reverse-p t))
 
 (defun hankaku-p (ch)
   (let ((code (char-code ch)))
@@ -99,25 +87,6 @@
   (and (or *tcode-verbose-message* non-verbose-message)
        (message (if *tcode-verbose-message* message non-verbose-message))))
 
-(defun tcode-display-help-buffer (content &optional buffer-name)
-  "ヘルプバッファ(ディフォルト*tcode-help-buffer-name*)に content の内容を表示する。"
-  (let* ((name (or buffer-name *tcode-help-buffer-name*))
-         (buffer (or (get-buffer name) (make-buffer name))))
-    (erase-buffer buffer)
-    (insert-string (buffer-start-point buffer) content)
-    (pop-to-buffer buffer)))
-
-(defun tcode-remove-help-buffer ()
-  (alexandria:if-let (win (car (get-buffer-windows
-                                (get-buffer *tcode-help-buffer-name*))))
-    (delete-window win)))
-
-(define-command tcode-clear () ()
-  "ややこしいモードに入っているのを全部クリアする。
-ヘルプ用ウィンドウも消去する。"
-  (tcode-remove-help-buffer)
-  (run-hooks *tcode-clear-hook*))
-
 (defun make-table-format (width-list)
     (loop for width in width-list
           for i from 0
@@ -127,7 +96,7 @@
 (defun make-column-width (table none-str)
   (loop for i from 0 to 9
         collect (apply 'max 4 (mapcar #'(lambda (x)
-                                          (string-width
+                                          (tcode-string-width
                                            (or (aref table (+ x i)) none-str)))
                                       '(0 10 20 30)))))
                                         
@@ -154,14 +123,6 @@
         (if (> whole-page 1)
           (format s "     (~d/~d)" page whole-page))
         (format s "~%")))))
-
-(define-minor-mode tc-mode
-    (:name "tc"
-     :keymap *tc-mode-keymap*)
-  (tcode-clear))
-
-(defun tc-mode-p ()
-  (mode-active-p (current-buffer) 'tc-mode))
 
 (defun tcode-set-action-to-table (strokes value table)
   "コード入力用の内部テーブルに入力列 STROKES に対する VALUE を設定する。
@@ -208,11 +169,6 @@
     :initform nil
     :reader non-2-stroke-char-list
     :documentation  "base-tableでspecial-commandにアサインされている場所を指定")
-   (special-command-alist
-    :initarg :special-command-alist
-    :initform nil
-    :reader special-command-alist
-    :documentation  "混ぜ書き変換うヘルプ表示などに使うストロークとコマンド")
    (strokes
     :initform nil
     :reader strokes
@@ -220,11 +176,6 @@
    (use-hankaku
     :initform t
     :documentation "英数字を半角で表示する(ディフォルト)")
-   (help-string
-    :initarg :help-string
-    :initform nil
-    :reader help-string
-    :documentation "message for tcode-mode-help")
    (key-translation-rule-table
     :initform
      ;;   0  1  2  3  4  5  6  7  8  9
@@ -261,6 +212,9 @@
 -3:	`tcode-mode-map' にしたがったコマンド。
 < -3:	- (文字コード)。")))
 
+(defun get-table-size ()
+  (table-size *tc-engine*))
+
 (defun tcode-key-to-char (engine key)
   "キーの番号から対応する文字を得る。"
   (loop for k across (key-translation-rule engine)
@@ -278,10 +232,13 @@
               (- code +ASCII-SPACE+)))))
 
 (defmethod initialize-instance :after ((engine tc-engine) &key)
-  (with-slots (table table-size base-table non-2-stroke-char-list special-command-alist) engine
+  (with-slots (table table-size base-table non-2-stroke-char-list) engine
     (setf table
-          (setup-tcode-table table-size base-table non-2-stroke-char-list))
-    (loop for (strokes . value) in special-command-alist
+          (setup-tcode-table table-size base-table non-2-stroke-char-list))))
+
+(defmethod setup-special-command ((engine tc-engine) alist)
+  (with-slots (table) engine
+    (loop for (strokes . value) in alist
           do
              (tcode-set-action-to-table (reverse strokes) value table))))
 
@@ -372,45 +329,6 @@
                    (t
                     (cons nil nil))))))))
 
-(define-command tcode-self-insert-command () ()
-  (destructuring-bind (decoded &rest args)
-      (tcode-decode-chars *tc-engine* (insertion-key-p (last-read-key-sequence)))
-    (declare (ignorable args))
-    (cond ((consp decoded)
-           (apply (car decoded) (cdr decoded)))
-          ((characterp decoded)
-           (insert-character (current-point)
-                             (filter *tc-engine* decoded))
-           #+tcode-trace
-           (message "tcode trace: ~a~%" args)
-           )
-          ((functionp decoded)
-           (funcall decoded))
-          ((and (symbolp decoded) (lem::get-command decoded))
-           (funcall decoded))
-          ((eq decoded t)
-           (clear-strokes *tc-engine*)))))
-
-(defun cancel-strokes ()
-  (when (tc-mode-p)
-    (unless (lem::keymap-find-keybind *tc-mode-keymap*
-                                      (last-read-key-sequence) nil)
-      (clear-strokes *tc-engine*))))
-
-(add-hook *post-command-hook* 'cancel-strokes)
-
-(define-command tc-mode-help () ()
-  (tcode-display-help-buffer (help-string *tc-engine*)))
-
-(define-command toggle-alnum-mode () ()
-  (toggle-alnum *tc-engine*))
-
-(define-command tc-show-tables (seq) ("sRL,RR,LR,LL: ")
-  (alexandria:if-let ((help-table (make-stroke-help-1 *tc-engine* seq)))
-                     (tcode-display-help-buffer (format nil "~a~%~%~a"
-                                                        (string-upcase seq)
-                                                        help-table))))
-
 (defun setup-tcode (file)
   (with-open-file (st file)
     (let* ((*package* (find-package :cl-tcode))
@@ -420,18 +338,6 @@
         (setq *tc-engine*
               (make-instance 'tc-engine
                            :non-2-stroke (al2v 'non-2-stroke)
-                           :special-command-alist (al2v 'special-commands)
                            :table-size (al2v 'table-size)
-                           :base-table (al2v 'table)
-                           :help-string (al2v 'help-string))))))
-  (setup-zen-han-map)
-  (loop for code from +ASCII-SPACE+ to +ASCII-TILDE+
-        for char = (code-char code)
-        do
-           (define-key *tc-mode-keymap*
-             (if (eql char #\space)
-                 "Space"
-                 (format nil "~c" char)) 'tcode-self-insert-command))
-  (define-key *tc-mode-keymap* "?" 'tc-mode-help)
-
-  (define-key *global-keymap* "M-\\" 'tc-mode))
+                           :base-table (al2v 'table))))))
+  (setup-zen-han-map))

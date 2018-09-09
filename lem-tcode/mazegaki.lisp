@@ -1,14 +1,20 @@
-;;; ・行またぎはしない。
-;;; ・current pointから行頭まで取る。
-;;; ・読みがあるかを調べる。
+(uiop/package:define-package :lem-tcode/mazegaki
+  (:use :cl :lem)
+  (:export :mazegaki-begin-conversion :mazegaki-finish))
 
-(in-package :cl-tcode)
+(in-package :lem-tcode/mazegaki)
 
 (defvar *mazegaki-max-suffix-length* 4
   "読みの中の活用語尾の最大文字数。")
 
 ;;; overlay
 (defvar *tcode-overlay* nil)
+
+(define-attribute conversion
+  (t :underline-p t))
+
+(define-attribute inflection
+  (t :reverse-p t))
 
 (defun set-overlay (start end)
   (setq *tcode-overlay*
@@ -32,7 +38,7 @@
   "* 候補を並べるときの位置。このリストにないキーは使用されない。")
 
 (defvar *tcode-mazegaki-terminate-char-list*
-  (mapcar (lambda (ch) (string-to-char ch))
+  (mapcar (lambda (ch) (cl-tcode:string-to-char ch))
             '("、" "。" "，" "．" "・" "「" "」" "（" "）"))
   "* 交ぜ書き変換の読みに含まれない2バイト文字のリスト。")
 
@@ -86,8 +92,8 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
           (setq msg (format nil "~a ~@[~a~]" msg suffix))
           (if (not (minibuffer-window-p (current-window)))
               (message msg ""))
-          (tcode-display-help-buffer
-           (tcode-draw-table candidate-table page whole-page)))
+          (lem-tcode/help-buffer:display-help-buffer
+           (cl-tcode:tcode-draw-table candidate-table page whole-page)))
         ;; show in minibuffer
         (message (format nil "~@{~@[~a~]~}"
                          msg (if (= whole-page 1)
@@ -102,7 +108,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
 (defun mazegaki-make-candidate-table (candidate-list)
   "candidate-listから候補の表を作る。
 候補の表における位置は、定数 `*tcode-mazegaki-stroke-priority-list*' に従う。"
-  (loop with table = (make-array (table-size *tc-engine*) :initial-element nil)
+  (loop with table = (make-array (cl-tcode:get-table-size) :initial-element nil)
         for candidate in candidate-list
         for position in *tcode-mazegaki-stroke-priority-list*
         do
@@ -236,7 +242,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
     (and (not (inflection-p converter))
          (loop for len from (- length delta) downto 0
                for word = (mazegaki-construct-yomi yomi len)
-               for candidate-list = (lookup-mazegaki-dic word)
+               for candidate-list = (cl-tcode:lookup-mazegaki-dic word)
                do
                   (when candidate-list
                     (set-length converter len)
@@ -258,7 +264,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
          (max-len (length yomi)))
     (loop for len from length to max-len
           for word = (mazegaki-construct-yomi yomi len)
-          for candidate-list = (lookup-mazegaki-dic word)
+          for candidate-list = (cl-tcode:lookup-mazegaki-dic word)
           do
              (when candidate-list
                (set-length converter len)
@@ -305,7 +311,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
                           (dec-length converter))
           then (dec-length converter l s)
           for word = (mazegaki-construct-yomi yomi l s)
-          for candidate-list = (lookup-mazegaki-dic word t)
+          for candidate-list = (cl-tcode:lookup-mazegaki-dic word t)
           while (> l 0)
           do
              (when candidate-list
@@ -322,7 +328,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
          (loop for (l s f) = (inc-length converter length suffix)
                then (inc-length converter l s)
                for word = (mazegaki-construct-yomi yomi l s)
-               for candidate-list = (lookup-mazegaki-dic word t)
+               for candidate-list = (cl-tcode:lookup-mazegaki-dic word t)
                while f
                do
                   (when candidate-list
@@ -437,7 +443,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
 
   (defun mazegaki-execute-select ()
     (let* ((ch (insertion-key-p (last-read-key-sequence)))
-           (key (tcode-char-to-key *tc-engine* ch)))
+           (key (cl-tcode:tcode-char-to-key cl-tcode:*tc-engine* ch)))
       (message "")  ; clear minibuffer
       (mazegaki-show/redo (if (minusp key)
                               ch
@@ -481,7 +487,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
 
   (define-command mazegaki-relimit-right () ()
     "読みを縮める。"
-    (tcode-remove-help-buffer)
+    (lem-tcode/help-buffer:remove-help-buffer)
     (reset-yomi mazegaki-converter)
     (let ((current (mzgk-len mazegaki-converter)))
       (if (or (mazegaki-lookup mazegaki-converter 1)
@@ -494,7 +500,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
 
   (define-command mazegaki-relimit-left () ()
     "読みを伸ばす。"
-    (tcode-remove-help-buffer)
+    (lem-tcode/help-buffer:remove-help-buffer)
     (reset-yomi mazegaki-converter)
     (let ((current (mzgk-len mazegaki-converter)))
       (if (or (mazegaki-lookup-with-inflection-reverse mazegaki-converter)
@@ -509,9 +515,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
 (define-command mazegaki-begin-conversion () ()
   (mazegaki-convert))
 
-(add-hook *tcode-clear-hook* 'mazegaki-finish)
-
-(loop for char in *tcode-char-list*
+(loop for char in cl-tcode:*tcode-char-list*
       do
          (define-key *tc-mazegaki-keymap*
            (format nil "~c" char) 'mazegaki-select-command))
@@ -521,3 +525,28 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
 (define-key *tc-mazegaki-keymap* ">" 'mazegaki-relimit-right)
 (define-key *tc-mazegaki-keymap* "<" 'mazegaki-relimit-left)
 (define-key *tc-mazegaki-keymap* "C-m" 'mazegaki-cancel/set)
+
+(defun display-direct-stroke (engine kakutei &optional yomi)
+  "KAKUTEI の中で、 YOMI に含まれず、かつ直接入力できる漢字を表示する。"
+  (let* ((target (if yomi
+                    (loop for c across yomi
+                          for result = (remove c kakutei)
+                          then (remove c result)
+                          finally
+                             (return result))
+                    kakutei))
+         (drawing (loop for ch across (remove-duplicates target)
+                        if (cl-tcode:show-stroke engine ch) collect it)))
+    (if drawing
+        (lem-tcode/help-buffer:display-help-buffer
+         (format nil "~{~a~%~}" drawing)))))
+
+(defun show-converted-stroke (kakutei &optional yomi)
+  (and kakutei
+       (display-direct-stroke cl-tcode:*tc-engine* kakutei yomi)))
+
+(define-command tcode-query-stroke () ()
+  (alexandria:if-let ((drawing (cl-tcode:show-stroke cl-tcode:*tc-engine*
+                                                     (character-at (current-point)))))
+    (lem-tcode/help-buffer:display-help-buffer drawing)
+    (message "ストロークはありません。")))

@@ -1,6 +1,13 @@
 (defpackage :cl-tcode
-  (:use :cl :lem)
-  (:export :tc-mode :wj :char-to-string :setup-tcode
-           :tcode-display-help-buffer :make-stroke-help
-           :tc-jis-code-select-mode
-           :tc-mazegaki-mode :set-mazegaki-dic :make-mazegaki-dic))
+  (:use :cl)
+  (:export :tc-mode :wj :char-to-string :string-to-char :clear-strokes
+           :tcode-char-to-key
+           :toggle-alnum :summarize-by-n
+           :+ASCII-SPACE+ :+ASCII-TILDE+ :*tc-engine* :*tcode-char-list*
+           :tcode-decode-chars :filter :get-table-size :tcode-draw-table
+           :make-stroke-help :show-stroke
+           :setup-special-command
+           :lookup-mazegaki-dic))
+           
+           
+

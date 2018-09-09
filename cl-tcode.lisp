@@ -1,7 +1,6 @@
-(uiop/package:define-package :lem-tcode/lem (:use :cl :lem))
-(in-package :lem-tcode/lem)
+(in-package :cl-tcode)
 
-(defvar *base* (asdf:system-source-directory (asdf:find-system :lem-tcode)))
+(defvar *base* (asdf:system-source-directory (asdf:find-system :cl-tcode)))
 (defvar *dic-zip-path* (merge-pathnames "master.zip" *base*))
 
 (defvar *pubdic-uri* "https://github.com/nz-tcoder/pubdic-plus-wnn/archive/master.zip")
@@ -24,8 +23,10 @@
            (ql:quickload :zip :silent t)
            (not (uiop:symbol-call :zip :unzip *dic-zip-path* *base*
                                   :if-exists :supersede))
-           (cl-tcode:make-mazegaki-dic *dic-file-list* *pubdic-path*
-                                       *mazegakipath*))))
+           (make-mazegaki-dic *dic-file-list* *pubdic-path* *mazegakipath*))))
 
-(cl-tcode:setup-tcode (merge-pathnames "tc-tbl.lisp" *base*))
-(cl-tcode:set-mazegaki-dic (mazegaki))
+(set-mazegaki-dic (mazegaki))
+
+(setup-tcode (merge-pathnames "tc-tbl.lisp" 
+                              (asdf:system-source-directory
+                               (asdf:find-system :cl-tcode))))
