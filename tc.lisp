@@ -81,12 +81,6 @@
     zenkaku
     ch))
 
-(defun tcode-verbose-message (message &optional non-verbose-message)
-  "変数 `*tcode-verbose-message*' が non-nil の場合には、 MESSAGE を表示する。
-そうでないとき、 NON-VERBOSE-MESSAGE があれば、これを表示する。"
-  (and (or *tcode-verbose-message* non-verbose-message)
-       (message (if *tcode-verbose-message* message non-verbose-message))))
-
 (defun make-table-format (width-list)
     (loop for width in width-list
           for i from 0
@@ -99,7 +93,7 @@
                                           (tcode-string-width
                                            (or (aref table (+ x i)) none-str)))
                                       '(0 10 20 30)))))
-                                        
+
 (defun tcode-draw-table (candidate-table page whole-page)
   (let* ((sep0 '(" " " " " " " " "  " "  " "  " " " " " " " ""))
          (sep1 '("[" " " " " " " "] " "  " " [" " " " " " " "]"))
@@ -300,7 +294,6 @@
                 ((= key -1)
                  ch)
                 ((= key -2)
-                 (message "key is -2, ch is ~c" ch)
                  (char-downcase ch))
                 (t
                  (- key)))
