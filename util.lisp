@@ -6,14 +6,13 @@
 (defun string-to-char (str)
   (char str 0))
 
-(defun ascii-word-char-p (ch)
+(defun 7bit-ascii-char-p (ch)
   (and (characterp ch)
-       (< (char-code ch) 128)
-       (alphanumericp ch)))
+       (< (char-code ch) 128)))
 
 (defun tcode-string-width (str)
   (reduce #'(lambda (x y)
-              (+ x (if (ascii-word-char-p y) 1 2)))
+              (+ x (if (7bit-ascii-char-p y) 1 2)))
           str
           :initial-value 0))
 
