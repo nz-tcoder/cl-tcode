@@ -1,6 +1,6 @@
 (defsystem "cl-tcode"
   :serial t
-  :depends-on (:cl-store)
+  :depends-on (:alexandria :cl-store)
   :components ((:file "packages")
                (:file "tc")
                (:file "util")
