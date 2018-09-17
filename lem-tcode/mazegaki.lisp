@@ -1,11 +1,14 @@
 (uiop/package:define-package :lem-tcode/mazegaki
   (:use :cl :lem)
-  (:export :mazegaki-begin-conversion :mazegaki-finish))
+  (:export :mazegaki-begin-conversion :mazegaki-finish :mazegaki-mode-p
+           :clear-help))
 
 (in-package :lem-tcode/mazegaki)
 
 (defvar *mazegaki-max-suffix-length* 4
   "読みの中の活用語尾の最大文字数。")
+
+(defvar *use-floating-window* t)
 
 ;;; overlay
 (defvar *tcode-overlay* nil)
@@ -42,9 +45,19 @@
             '("、" "。" "，" "．" "・" "「" "」" "（" "）"))
   "* 交ぜ書き変換の読みに含まれない2バイト文字のリスト。")
 
+(define-command mazegaki-use-floating-window () ()
+  (message "~a" (setq *use-floating-window* (not *use-floating-window*))))
+
 (define-minor-mode tc-mazegaki-mode
     (:name "mazegaki"
      :keymap *tc-mazegaki-keymap*))
+
+(defun mazegaki-mode-p ()
+  (mode-active-p (current-buffer) 'tc-mazegaki-mode))
+
+(defun clear-help ()
+  (lem-tcode/help-buffer:remove-help-buffer)
+  (lem.popup-window::clear-popup-message))
 
 (defun get-mazegaki-line (point)
   (with-point ((s point))
@@ -78,8 +91,40 @@
                         (or (< i 20) (>= i 30)))
                    (return t)))))
 
+(defun show-candidate-in-minibuffer (candidate-table page whole-page
+                                     &optional msg suffix)
+  (message (format nil "~@{~@[~a~]~}"
+                   msg
+                   (if (= whole-page 1)
+                       ""
+                       (format nil "(~d/~d)  " page whole-page))
+                   (format nil "~{[~a ~a ~a ~a] ~a  ~a [~a ~a ~a ~a]~}"
+                           (loop for n from 20 to 29
+                                 collect (or (aref candidate-table n) "-")))
+                   "  "
+                   suffix)))
+
+(defun show-using-buffers (candidate-table page whole-page &optional msg suffix)
+  (if (use-whole-table whole-page candidate-table)
+      (progn
+        (setq msg (format nil "~a ~@[~a~]" msg suffix))
+        (if (not (minibuffer-window-p (current-window)))
+            (message msg ""))
+        (lem-tcode/help-buffer:display-help-buffer
+         (cl-tcode:tcode-draw-table candidate-table page whole-page)))
+      (show-candidate-in-minibuffer candidate-table page whole-page
+                                    msg suffix)))
+
+(defun show-using-floating-window (candidate-table page whole-page
+                                    &optional msg suffix)
+  (setq msg (format nil "~a ~@[~a~]" msg suffix))
+  (lem-if:display-popup-message (implementation)
+                                (cl-tcode:tcode-draw-table candidate-table
+                                                           page whole-page)
+                                nil))
+
 (defun show-candidate-not-inline (candidate-table noc current-offset
-                        &optional msg suffix)
+                                  &optional msg suffix)
   "candidate-table から候補を表示する。
 noc (候補の数)と current-offset から現在何番目の表を表示しているか計算する。"
   (let* ((plist-size (length *tcode-mazegaki-stroke-priority-list*))
@@ -87,23 +132,9 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
         (page (- (1+ whole-page)
                   (floor (/ (+ (- noc current-offset) (1- plist-size))
                             plist-size)))))
-    (if (use-whole-table whole-page candidate-table)
-        (progn
-          (setq msg (format nil "~a ~@[~a~]" msg suffix))
-          (if (not (minibuffer-window-p (current-window)))
-              (message msg ""))
-          (lem-tcode/help-buffer:display-help-buffer
-           (cl-tcode:tcode-draw-table candidate-table page whole-page)))
-        ;; show in minibuffer
-        (message (format nil "~@{~@[~a~]~}"
-                         msg (if (= whole-page 1)
-                                 ""
-                                 (format nil "(~d/~d)  " page whole-page))
-                         (format nil "~{[~a ~a ~a ~a] ~a  ~a [~a ~a ~a ~a]~}"
-                                 (loop for n from 20 to 29
-                                       collect (or (aref candidate-table n)
-                                                   "-")))
-                         "  " suffix)))))
+    (if *use-floating-window*
+        (show-using-floating-window candidate-table page whole-page msg suffix)
+        (show-using-buffers candidate-table page whole-page msg suffix))))
 
 (defun mazegaki-make-candidate-table (candidate-list)
   "candidate-listから候補の表を作る。
@@ -421,6 +452,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
 
   (defun mazegaki-finish ()
     (clear-overlay)
+    (lem.popup-window::clear-popup-message)
     (if mazegaki-converter
         (show-converted-stroke (mzgk-kakutei mazegaki-converter)
                                (mazegaki-construct-yomi
@@ -487,7 +519,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
 
   (define-command mazegaki-relimit-right () ()
     "読みを縮める。"
-    (lem-tcode/help-buffer:remove-help-buffer)
+    (clear-help)
     (reset-yomi mazegaki-converter)
     (let ((current (mzgk-len mazegaki-converter)))
       (if (or (mazegaki-lookup mazegaki-converter 1)
@@ -500,7 +532,7 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
 
   (define-command mazegaki-relimit-left () ()
     "読みを伸ばす。"
-    (lem-tcode/help-buffer:remove-help-buffer)
+    (clear-help)
     (reset-yomi mazegaki-converter)
     (let ((current (mzgk-len mazegaki-converter)))
       (if (or (mazegaki-lookup-with-inflection-reverse mazegaki-converter)
@@ -536,10 +568,12 @@ noc (候補の数)と current-offset から現在何番目の表を表示して�
                              (return result))
                     kakutei))
          (drawing (loop for ch across (remove-duplicates target)
-                        if (cl-tcode:show-stroke engine ch) collect it)))
-    (if drawing
-        (lem-tcode/help-buffer:display-help-buffer
-         (format nil "~{~a~%~}" drawing)))))
+                        if (cl-tcode:show-stroke engine ch) collect it))
+         (stroke (if drawing (format nil "~{~a~%~}" drawing))))
+    (and stroke
+         (if *use-floating-window*
+             (lem-if:display-popup-message (implementation) stroke nil)
+             (lem-tcode/help-buffer:display-help-buffer stroke)))))
 
 (defun show-converted-stroke (kakutei &optional yomi)
   (and kakutei

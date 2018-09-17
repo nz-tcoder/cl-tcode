@@ -10,17 +10,21 @@
   "ややこしいモードに入っているのを全部クリアする。
 ヘルプ用ウィンドウも消去する。"
   (lem-tcode/help-buffer:remove-help-buffer)
+  (lem.popup-window::clear-popup-message)
   (run-hooks *tcode-clear-hook*))
 
 (define-minor-mode tc-mode
     (:name "tc"
-     :keymap *tc-mode-keymap*)
+     :keymap *tc-mode-keymap*
+     :disable-hook 'lem-tcode/mazegaki:clear-help)
   (tcode-clear))
 
 (defun tc-mode-p ()
   (mode-active-p (current-buffer) 'tc-mode))
 
 (define-command tcode-self-insert-command () ()
+  (unless (lem-tcode/mazegaki:mazegaki-mode-p)
+    (lem-tcode/mazegaki:clear-help))
   (destructuring-bind (decoded &rest args)
       (cl-tcode:tcode-decode-chars cl-tcode:*tc-engine*
                                    (insertion-key-p (last-read-key-sequence)))
